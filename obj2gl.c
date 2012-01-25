@@ -3,13 +3,8 @@
 #include <stdlib.h>
 #include "CUnit/Basic.h"
 
-/* Pointer to the file used by the tests. */
 static FILE* temp_file = NULL;
 
-/* The suite initialization function.
- * Opens the temporary file used by the tests.
- * Returns zero on success, non-zero otherwise.
- */
 int init_suite1(void)
 {
    if (NULL == (temp_file = fopen("triangle.obj", "r"))) {
@@ -20,10 +15,6 @@ int init_suite1(void)
    }
 }
 
-/* The suite cleanup function.
- * Closes the temporary file used by the tests.
- * Returns zero on success, non-zero otherwise.
- */
 int clean_suite1(void)
 {
    if (0 != fclose(temp_file)) {
@@ -74,7 +65,6 @@ void drawObj(FILE* obj) {
     void pushNormal(struct point normal) {
         if (normalsSize >= normalsCapacity) {
             normalsCapacity = normalsCapacity * 3 / 2 + 1;
-            printf("realloc %d\n", normalsCapacity);
             normals = realloc(normals, normalsCapacity * sizeof(struct point));
         }
 
@@ -91,7 +81,6 @@ void drawObj(FILE* obj) {
     void pushVertex(struct point vertex) {
         if (verticesSize >= verticesCapacity) {
             verticesCapacity = verticesCapacity * 3 / 2 + 1;
-            printf("realloc %d\n", verticesCapacity);
             vertices = realloc(vertices, verticesCapacity * sizeof(struct point));
         }
 
@@ -155,77 +144,24 @@ void testDrawObj(void) {
     CU_ASSERT_EQUAL(1, verifyEnd);
 }
 
-void testObjRead(void)
-{
-    size_t len = 0;
-    char *line;
-
-    if (NULL != temp_file) {
-        float x, y, z;
-
-        rewind(temp_file);
-
-        ssize_t nRead = getline(&line, &len, temp_file);
-
-        CU_ASSERT(32 == nRead);
-        CU_ASSERT(line[0] == '#');
-
-        nRead = getline(&line, &len, temp_file);
-        CU_ASSERT(line[0] == 'm');
-
-        nRead = getline(&line, &len, temp_file);
-        CU_ASSERT(line[0] == 'o');
-
-        nRead = getline(&line, &len, temp_file);
-        CU_ASSERT(line[0] == '#');
-
-        nRead = getline(&line, &len, temp_file);
-        CU_ASSERT(line[0] == 'v');
-
-        sscanf(line, "v %f %f %f", &x, &y, &z);
-        CU_ASSERT_DOUBLE_EQUAL(x, 0, 1e-6);
-        CU_ASSERT_DOUBLE_EQUAL(y, 1.08866211, 1e-6);
-        CU_ASSERT_DOUBLE_EQUAL(x, 0, 1e-6);
-
-        nRead = getline(&line, &len, temp_file);
-        CU_ASSERT(line[0] == 'v');
-
-        sscanf(line, "v %f %f %f", &x, &y, &z);
-        CU_ASSERT_DOUBLE_EQUAL(x, 0, 1e-6);
-        CU_ASSERT_DOUBLE_EQUAL(y, -0.54433105, 1e-6);
-        CU_ASSERT_DOUBLE_EQUAL(z, 1.1547, 1e-6);
-    }
-}
-
-/* The main() function for setting up and running the tests.
- * Returns a CUE_SUCCESS on successful running, another
- * CUnit error code on failure.
- */
 int main()
 {
    CU_pSuite pSuite = NULL;
 
-   /* initialize the CUnit test registry */
    if (CUE_SUCCESS != CU_initialize_registry())
       return CU_get_error();
 
-   /* add a suite to the registry */
    pSuite = CU_add_suite("Suite_1", init_suite1, clean_suite1);
-   if (NULL == pSuite) {
+
+   if (NULL == pSuite) {CU_cleanup_registry();
+      return CU_get_error();
+   }
+
+   if ((NULL == CU_add_test(pSuite, "drawObj", testDrawObj))) {
       CU_cleanup_registry();
       return CU_get_error();
    }
 
-   /* add the tests to the suite */
-   /* NOTE - ORDER IS IMPORTANT - MUST TEST fread() AFTER fprintf() */
-   if ((NULL == CU_add_test(pSuite, "drawObj", testDrawObj)) ||
-       (NULL == CU_add_test(pSuite, "read", testObjRead)))
-   {
-      CU_cleanup_registry();
-      return CU_get_error();
-   }
-
-   /* Run all tests using the CUnit Basic interface */
    CU_basic_set_mode(CU_BRM_VERBOSE);
    CU_basic_run_tests();
    CU_cleanup_registry();
