@@ -86,44 +86,51 @@ void pushPoint(struct pointList* this, struct point normal) {
 }
 
 void drawObj(FILE* obj) {
-    struct pointList normals = newPointList();
-    struct pointList vertices = newPointList();
+    struct pointList normals;
+    struct pointList vertices;
+    char *line;
 
-    int n, v;
-
-    void nv(void) {
-        struct point normal = normals.element[n - 1];
-        struct point vertex = vertices.element[v - 1];
-        glNormal3f(normal.x, normal.y, normal.z);
-        glVertex3f(vertex.x, vertex.y, vertex.z);
-    }
-
-    char *line = 0;
-    size_t len;
-
-    while (getline(&line, &len, obj) != -1) {
+    void readLine(void) {
         float x, y, z;
-        int chars;
+        int dummy;
 
-        if (sscanf(line, "vn %f %f %f", &x, &y, &z) == 3) {
-            pushPoint(&normals, (struct point) {x, y, z});
-        } else if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
-            pushPoint(&vertices, (struct point) {x, y, z});
-        } else if (sscanf(line, "f %d//%d %n", &v, &n, &chars) == 2) {
-            char* pos = line + chars;
+        void drawPolygon(void) {
+            char* pos = line + 1;
+            int n, v;
+            int chars;
 
             glBegin(GL_POLYGON);
-            nv();
 
             while (sscanf(pos, "%d//%d %n", &v, &n, &chars) == 2) {
-                nv();
+                struct point normal = normals.element[n - 1];
+                struct point vertex = vertices.element[v - 1];
+                glNormal3f(normal.x, normal.y, normal.z);
+                glVertex3f(vertex.x, vertex.y, vertex.z);
                 pos += chars;
             }
 
             glEnd();
         }
+
+        if (sscanf(line, "vn %f %f %f", &x, &y, &z) == 3) {
+            pushPoint(&normals, (struct point) {x, y, z});
+        } else if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
+            pushPoint(&vertices, (struct point) {x, y, z});
+        } else if (sscanf(line, "f %d//", &dummy) == 1) {
+            drawPolygon();
+        }
     }
 
+    normals = newPointList();
+    vertices = newPointList();
+    line = malloc(80);
+    size_t len;
+
+    while (getline(&line, &len, obj) != -1) {
+        readLine();
+    }
+
+    free(line);
     deletePointList(normals);
     deletePointList(vertices);
 }
