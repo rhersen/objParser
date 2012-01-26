@@ -57,44 +57,43 @@ static void glVertex3f(float x, float y, float z) {
     verifyVertex.z = z;
 }
 
+struct pointList {
+    int capacity;
+    int size;
+    struct point* element;
+};
+
+struct pointList newPointList(void) {
+    int capacity = 1;
+    struct pointList r = {capacity, 0, malloc(capacity * sizeof(struct point))};
+    return r;
+}
+
+deletePointList(struct pointList this) {
+    free(this.element);
+}
+
+void pushPoint(struct pointList* this, struct point normal) {
+    if (this->size >= this->capacity) {
+        this->capacity = this->capacity * 3 / 2 + 1;
+        this->element = realloc(this->element, this->capacity * sizeof(struct point));
+    }
+
+    this->element[this->size].x = normal.x;
+    this->element[this->size].y = normal.y;
+    this->element[this->size].z = normal.z;
+    ++this->size;
+}
+
 void drawObj(FILE* obj) {
-    int normalsCapacity = 1;
-    int normalsSize = 0;
-    struct point* normals = realloc(0, normalsCapacity * sizeof(struct point));
-
-    void pushNormal(struct point normal) {
-        if (normalsSize >= normalsCapacity) {
-            normalsCapacity = normalsCapacity * 3 / 2 + 1;
-            normals = realloc(normals, normalsCapacity * sizeof(struct point));
-        }
-
-        normals[normalsSize].x = normal.x;
-        normals[normalsSize].y = normal.y;
-        normals[normalsSize].z = normal.z;
-        ++normalsSize;
-    }
-
-    int verticesCapacity = 1;
-    int verticesSize = 0;
-    struct point* vertices = realloc(0, verticesCapacity * sizeof(struct point));
-
-    void pushVertex(struct point vertex) {
-        if (verticesSize >= verticesCapacity) {
-            verticesCapacity = verticesCapacity * 3 / 2 + 1;
-            vertices = realloc(vertices, verticesCapacity * sizeof(struct point));
-        }
-
-        vertices[verticesSize].x = vertex.x;
-        vertices[verticesSize].y = vertex.y;
-        vertices[verticesSize].z = vertex.z;
-        ++verticesSize;
-    }
+    struct pointList normals = newPointList();
+    struct pointList vertices = newPointList();
 
     int n, v;
 
     void nv(void) {
-        struct point normal = normals[n - 1];
-        struct point vertex = vertices[v - 1];
+        struct point normal = normals.element[n - 1];
+        struct point vertex = vertices.element[v - 1];
         glNormal3f(normal.x, normal.y, normal.z);
         glVertex3f(vertex.x, vertex.y, vertex.z);
     }
@@ -107,9 +106,9 @@ void drawObj(FILE* obj) {
         int chars;
 
         if (sscanf(line, "vn %f %f %f", &x, &y, &z) == 3) {
-            pushNormal((struct point) {x, y, z});
+            pushPoint(&normals, (struct point) {x, y, z});
         } else if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
-            pushVertex((struct point) {x, y, z});
+            pushPoint(&vertices, (struct point) {x, y, z});
         } else if (sscanf(line, "f %d//%d %n", &v, &n, &chars) == 2) {
             char* pos = line + chars;
 
@@ -125,8 +124,8 @@ void drawObj(FILE* obj) {
         }
     }
 
-    free(normals);
-    free(vertices);
+    deletePointList(normals);
+    deletePointList(vertices);
 }
 
 void testDrawObj(void) {
